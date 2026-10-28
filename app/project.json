@@ -1,0 +1,557 @@
+{
+  "schema_version": 1,
+  "sounds": [
+    {
+      "id": "brief",
+      "file": "calls/brief.wav",
+      "label": "叽咕叽",
+      "source": "4705763810c5a11fe60d71d195c3bf69.mp4",
+      "start": 17.88,
+      "end": 19.15,
+      "selection_reason": "保留旧 call-11 对应的紧凑两段音型和完整尾音。其他组合音不再仅因聚类相近而全部排除。",
+      "label_source": "用户命名",
+      "enabled": true
+    },
+    {
+      "id": "series",
+      "file": "calls/series.wav",
+      "label": "peekbo",
+      "source": "0b4e502d7296536114ad0b9d522e5d20.mp4",
+      "start": 10.42,
+      "end": 12.05,
+      "selection_reason": "保留旧 call-5 对应的连续短音及上滑、平稳尾音；与旧 call-1 为近似重复，只保留完整代表。",
+      "label_source": "用户命名",
+      "enabled": true
+    },
+    {
+      "id": "rising",
+      "file": "calls/rising.wav",
+      "label": "拍手歌",
+      "source": "4705763810c5a11fe60d71d195c3bf69.mp4",
+      "start": 9.08,
+      "end": 14.6,
+      "selection_reason": "按用户要求延长为原视频9.08–14.60秒连续录音，包含两轮上行旋律和中间回应；自然起止，不重复拼接。避开16秒附近额外宽频冲击。",
+      "label_source": "用户命名",
+      "enabled": true
+    },
+    {
+      "id": "double_turn",
+      "file": "calls/double_turn.wav",
+      "label": "小鸡宝宝",
+      "source": "0b4e502d7296536114ad0b9d522e5d20.mp4",
+      "start": 2.82,
+      "end": 4.75,
+      "selection_reason": "恢复旧 call-2 对应完整句式。两个明显起音后接低平尾音，与现有三段的最小DTW距离约0.464；此前按三组聚类过度归并。",
+      "enabled": true,
+      "label_source": "用户试听候选A后确认"
+    },
+    {
+      "id": "trill",
+      "file": "calls/trill.wav",
+      "label": "连续转音",
+      "source": "0b4e502d7296536114ad0b9d522e5d20.mp4",
+      "start": 12.96,
+      "end": 15.82,
+      "selection_reason": "恢复旧 call-6 对应完整长句。前面数个短音后接连续起伏转音，时序结构不同于短鸣；与原三段的最小DTW距离约0.526。保留连续录音，不人工重复。",
+      "enabled": true
+    }
+  ],
+  "frames": [
+    {
+      "file": "play.png",
+      "rect": [
+        20,
+        120,
+        420,
+        400
+      ],
+      "anchor": [
+        202.027,
+        486.189
+      ],
+      "scale": 0.74,
+      "outline": [
+        [
+          20,
+          120
+        ],
+        [
+          385,
+          120
+        ],
+        [
+          385,
+          385
+        ],
+        [
+          440,
+          445
+        ],
+        [
+          440,
+          470
+        ],
+        [
+          20,
+          470
+        ]
+      ]
+    },
+    {
+      "file": "play.png",
+      "rect": [
+        385,
+        120,
+        420,
+        400
+      ],
+      "anchor": [
+        562.027,
+        483.189
+      ],
+      "scale": 0.74,
+      "outline": [
+        [
+          385,
+          120
+        ],
+        [
+          750,
+          120
+        ],
+        [
+          750,
+          385
+        ],
+        [
+          805,
+          445
+        ],
+        [
+          805,
+          470
+        ],
+        [
+          440,
+          470
+        ],
+        [
+          440,
+          445
+        ],
+        [
+          385,
+          385
+        ]
+      ]
+    },
+    {
+      "file": "play.png",
+      "rect": [
+        750,
+        120,
+        413,
+        400
+      ],
+      "anchor": [
+        926.027,
+        486.189
+      ],
+      "scale": 0.74,
+      "outline": [
+        [
+          750,
+          120
+        ],
+        [
+          1145,
+          120
+        ],
+        [
+          1145,
+          410
+        ],
+        [
+          1163,
+          445
+        ],
+        [
+          1163,
+          470
+        ],
+        [
+          805,
+          470
+        ],
+        [
+          805,
+          445
+        ],
+        [
+          750,
+          385
+        ]
+      ]
+    },
+    {
+      "file": "play.png",
+      "rect": [
+        1145,
+        30,
+        303,
+        520
+      ],
+      "anchor": [
+        1275.027,
+        523.189
+      ],
+      "scale": 0.74,
+      "outline": [
+        [
+          1145,
+          30
+        ],
+        [
+          1448,
+          30
+        ],
+        [
+          1448,
+          510
+        ],
+        [
+          1390,
+          510
+        ],
+        [
+          1390,
+          470
+        ],
+        [
+          1163,
+          470
+        ],
+        [
+          1163,
+          445
+        ],
+        [
+          1145,
+          410
+        ]
+      ]
+    },
+    {
+      "file": "play.png",
+      "rect": [
+        20,
+        470,
+        380,
+        580
+      ],
+      "anchor": [
+        180,
+        1033
+      ],
+      "scale": 0.7
+    },
+    {
+      "file": "play.png",
+      "rect": [
+        425,
+        470,
+        347,
+        580
+      ],
+      "anchor": [
+        585,
+        1033
+      ],
+      "scale": 0.7
+    },
+    {
+      "file": "play.png",
+      "rect": [
+        772,
+        470,
+        350,
+        580
+      ],
+      "anchor": [
+        923,
+        1033
+      ],
+      "scale": 0.7
+    },
+    {
+      "file": "play.png",
+      "rect": [
+        1122,
+        470,
+        326,
+        580
+      ],
+      "anchor": [
+        1275,
+        1033
+      ],
+      "scale": 0.7,
+      "outline": [
+        [
+          1122,
+          470
+        ],
+        [
+          1390,
+          470
+        ],
+        [
+          1390,
+          510
+        ],
+        [
+          1448,
+          510
+        ],
+        [
+          1448,
+          1050
+        ],
+        [
+          1122,
+          1050
+        ]
+      ]
+    }
+  ],
+  "actions": {
+    "pet": {
+      "label": "摸摸点点",
+      "frames": [
+        0,
+        2,
+        2,
+        1,
+        2,
+        0
+      ],
+      "fps": 4,
+      "duration": 2.2,
+      "category": "互动",
+      "motion": "pet",
+      "auto_weight": 0,
+      "sound": "random",
+      "message": "啾～再摸摸",
+      "loop": false,
+      "enabled": true,
+      "kind": "frames"
+    },
+    "eat": {
+      "label": "喂一口小米",
+      "frames": [
+        0,
+        2,
+        3,
+        3,
+        2,
+        0
+      ],
+      "fps": 8,
+      "duration": 3.5,
+      "category": "互动",
+      "motion": "none",
+      "auto_weight": 0,
+      "sound": "random",
+      "message": "小米真香！",
+      "loop": true,
+      "enabled": true,
+      "kind": "frames"
+    },
+    "look": {
+      "label": "歪头看看",
+      "frames": [
+        0,
+        2,
+        2,
+        2,
+        1,
+        0
+      ],
+      "fps": 4,
+      "duration": 2.4,
+      "category": "动作",
+      "motion": "none",
+      "auto_weight": 1,
+      "sound": "none",
+      "message": "",
+      "loop": false,
+      "enabled": true,
+      "kind": "frames"
+    },
+    "walk": {
+      "label": "走两步",
+      "frames": [
+        4,
+        5,
+        6,
+        7
+      ],
+      "fps": 8,
+      "duration": 2.4,
+      "category": "动作",
+      "motion": "walk",
+      "auto_weight": 1,
+      "sound": "none",
+      "message": "",
+      "loop": true,
+      "enabled": true,
+      "kind": "frames"
+    },
+    "curious": {
+      "label": "竖冠探头",
+      "frames": [
+        0,
+        8,
+        9,
+        9,
+        10,
+        10,
+        11,
+        10,
+        9,
+        8,
+        0
+      ],
+      "fps": 4,
+      "duration": 3,
+      "category": "动作",
+      "motion": "none",
+      "auto_weight": 2,
+      "sound": "none",
+      "message": "",
+      "loop": false,
+      "enabled": true,
+      "kind": "frames"
+    },
+    "stretch": {
+      "label": "伸伸翅膀",
+      "frames": [],
+      "fps": 18,
+      "duration": 3,
+      "category": "动作",
+      "motion": "none",
+      "auto_weight": 1,
+      "sound": "none",
+      "message": "",
+      "loop": false,
+      "enabled": true,
+      "kind": "flight"
+    },
+    "bite": {
+      "label": "咬你一口",
+      "frames": [
+        0,
+        16,
+        17,
+        18,
+        17,
+        18,
+        19,
+        0
+      ],
+      "fps": 6,
+      "duration": 2,
+      "category": "互动",
+      "motion": "bite",
+      "auto_weight": 0,
+      "sound": "none",
+      "message": "嗷呜，轻轻咬一口～",
+      "loop": false,
+      "enabled": true,
+      "kind": "frames"
+    },
+    "rock": {
+      "label": "玩摇摇车",
+      "frames": [
+        20,
+        20,
+        21,
+        21,
+        20,
+        22,
+        22,
+        23
+      ],
+      "fps": 3,
+      "duration": 8,
+      "category": "动作",
+      "motion": "rock",
+      "auto_weight": 0,
+      "sound": "none",
+      "message": "摇呀摇～",
+      "loop": true,
+      "enabled": true,
+      "kind": "frames"
+    }
+  },
+  "interactions": {
+    "click": "pet",
+    "double_click": "stretch",
+    "idle_min": 7,
+    "idle_max": 14,
+    "call_min": 60,
+    "call_max": 150
+  },
+  "provenance": {
+    "audio": {
+      "selection": "先比较频谱和音节轮廓以去除明显重复录制，再保留不同的完整句式；不再强制把所有叫声压成3组。v1.4恢复旧call-2和call-6的不同组合结构，并按用户要求延长拍手歌。",
+      "processing": "从原视频重裁；44.1 kHz单声道PCM16；450 Hz四阶高通；活动段RMS约-23 dBFS、峰值不超过-4 dBFS；12 ms淡入、35 ms淡出。",
+      "new_video_decision": "f888视频整体较弱、无明确新增音型，未收录；e140前段有叫声，但与现有代表结构相似，未新增选项。",
+      "limitations": "叽咕叽、peekbo、拍手歌为用户指定名称；其余标签仅描述音型。本次未做人耳听辨，不能保证完全排除所有环境声。频谱距离是候选筛选依据，不是听感或行为学分类结论。"
+    },
+    "actions": {
+      "bite": {
+        "source": "e140f8c0968b50e81d4b434cc6f43d6b.mp4",
+        "start": 6.25,
+        "end": 7.5
+      },
+      "rock": {
+        "source": "f8883c3bdb38f5012af8955b58d46b62.mp4",
+        "start": 0,
+        "end": 12.5
+      }
+    },
+    "images": {
+      "tool": "built-in imagegen",
+      "file": "play.png",
+      "prompt": "4x2 transparent photorealistic atlas; same pearl cockatiel; top four full-body beak bite/release poses, crest swept back then raised; bottom four balancing poses on reference wooden T-bar rocker, natural tall crest, complete tails and bases, isolated cutouts.",
+      "crest_fix": {
+        "version": "1.5",
+        "tool": "built-in imagegen",
+        "files": [
+          "motions.png",
+          "curious.png",
+          "play.png",
+          "flight.png"
+        ],
+        "references": [
+          "f8883c3bdb38f5012af8955b58d46b62.mp4",
+          "7afe92d578c3cf1173a386350cc7c3b7.jpg",
+          "79bce2343e4f61943890fb55ca97643d.jpg",
+          "51907e844197e38ddc4c263139f6437b.mp4",
+          "0f3324bf2bec10ed068692ffcd0ba07f.mp4"
+        ],
+        "prompt": "Four transparent photographic sprite atlases of the same adult grey pearl cockatiel from the real-photo references: muted yellow-grey face, orange cheek, detailed cream pearl markings on grey wings, a visible feathered crest, long narrow layered tail, scaly pink-grey feet. Preserve eight complete poses per atlas: idle/blink/tilt/bow/walking; alert crest and beak responses; bite and wooden rocker; flight with shoulder-attached wings and curled airborne toes. Keep realistic feather detail, consistent identity and the requested action order. Transparent RGBA.",
+        "limitations": "依据实拍生成的二维动作素材，采用用户认可的有冠羽版本；不是原视频逐帧抠像或三维模型。侧面或被横杆遮挡的脚趾会自然不可见。",
+        "generated_files": {
+          "motions.png": "exec-42e06947-6d72-4a8a-99ee-0845dbebbcde.png",
+          "curious.png": "exec-7e0170f0-af38-4697-9270-86c305800e71.png",
+          "play.png": "exec-c8ec06cd-89f2-4334-b0a2-eb1518882835.png",
+          "flight.png": "exec-a0d1bfb3-cd73-4a9c-967f-30e1636a0b46.png"
+        },
+        "selection": "2026-10-25 用户确认保留带冠羽的 curious、play、flight 三组形象；motions 使用同一组的配套基础动作。保留认可的羽毛外观，仅校准裁切、定位和显示比例。",
+        "rendering": "逐帧按轮廓分开相邻姿态；站立与互动统一脚定位和体型。motions第3、7号源姿态尾尖不完整，运行时分别复用curious第4号完整前探和motions第5号完整迈步。飞行对齐眼部，整体绘制一只鸟；前探与竖冠切换不交叉叠影。"
+      }
+    }
+  }
+}

@@ -1,0 +1,40 @@
+# Local build outputs and historical release packages
+/outputs/
+/work/
+/build/
+/dist/
+
+# Unity generated files; keep Assets (including .meta), Packages and ProjectSettings
+/unity/Diandian/[Ll]ibrary/
+/unity/Diandian/[Tt]emp/
+/unity/Diandian/[Oo]bj/
+/unity/Diandian/[Ll]ogs/
+/unity/Diandian/[Uu]ser[Ss]ettings/
+/unity/Diandian/[Bb]uild/
+/unity/Diandian/[Bb]uilds/
+/unity/Diandian/[Mm]emoryCaptures/
+/unity/Diandian/[Rr]ecordings/
+/unity/Diandian/.vs/
+/unity/Diandian/*.csproj
+/unity/Diandian/*.sln
+/unity/Diandian/*.slnx
+/unity/Diandian/*.user
+
+# Python and local editor files
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.vs/
+.idea/
+*.tmp
+*.log
+Thumbs.db
+.DS_Store
+
+# Local credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
