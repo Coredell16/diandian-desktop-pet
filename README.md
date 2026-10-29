@@ -7,6 +7,8 @@ Windows 玄凤鹦鹉桌面宠物项目，同时维护二维与 Unity 三维两�
 - **v1.6 二维版**：Python 桌宠、帧动画、叫声、互动和可视化编辑器，新增个人照片生成整套外观。
 - **v2 三维版（制作中）**：Unity 工程，包含三维模型、骨骼、展翅和桌面窗口功能。**目前仅为初版，三维建模仍在制作中，模型细节和整体精细度尚待完善。**
 
+Windows 运行版：[下载 v1.6.0 分享包](https://github.com/Coredell16/diandian-desktop-pet/releases/tag/v1.6.0)。完整解压后运行“点点.exe”，无需安装 Python。
+
 详细使用、构建与版本记录见 [项目说明.md](项目说明.md)。
 
 ## v1.6：用自己的照片生成玄凤桌宠
@@ -44,7 +46,7 @@ git clone https://github.com/Coredell16/diandian-desktop-pet.git
 
 `.gitignore` 排除 Unity 缓存、日志、本机设置、Python 缓存，以及 `outputs/` 和构建临时目录。忽略规则不会删除本机文件；历史安装包和归档仍保留在本机，不会随源码自动备份。
 
-需要分享安装包时，可另行上传到 GitHub Releases。修改源码后，需要提交并推送才会同步到 GitHub；朋友的客户端自动更新还需要单独配置发布地址，详见项目说明。
+Windows 分享包见 [GitHub Releases](https://github.com/Coredell16/diandian-desktop-pet/releases)。修改源码后，需要提交并推送才会同步到 GitHub；朋友的客户端自动更新还需要单独配置发布地址，详见项目说明。
 
 ## 问题反馈
 
