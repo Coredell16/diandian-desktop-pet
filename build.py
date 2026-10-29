@@ -9,6 +9,7 @@ import sys
 import tempfile
 import zipfile
 import hashlib
+import PyQt5
 
 ROOT = Path(__file__).resolve().parent
 APP = ROOT / 'app'
@@ -22,15 +23,26 @@ WORK.mkdir(exist_ok=True)
 
 with tempfile.TemporaryDirectory(prefix='build-', dir=WORK) as temporary:
     stage = Path(temporary).resolve()
+    # Qt's Windows loader must find these next to the EXE, including under Chinese paths.
+    qt_bin = Path(PyQt5.__file__).resolve().parent / 'Qt5' / 'bin'
+    ssl_libraries = []
+    for name in ('libcrypto-1_1-x64.dll', 'libssl-1_1-x64.dll'):
+        library = qt_bin / name
+        if not library.is_file():
+            raise RuntimeError('打包环境缺少 Qt HTTPS 运行库：' + name)
+        ssl_libraries.append(library)
     subprocess.run([sys.executable, '-m', 'PyInstaller', '--noconfirm', '--onedir',
         '--windowed', '--noupx', '--name', '点点', '--icon', str(APP/'diandian.ico'),
         '--distpath', str(stage/'dist'), '--workpath', str(stage/'cache'),
         '--specpath', str(stage), str(APP/'diandian.py')], check=True)
     package = stage/'dist/点点'
+    for library in ssl_libraries:
+        shutil.copy2(library, package/library.name)
     project = json.loads((APP/'project.json').read_text(encoding='utf-8'))
     assets = {'motions.png','curious.png','flight.png','diandian.ico','project.json'}
     assets.update(item['file'] for item in project['sounds'])
     assets.update(item['file'] for item in project['frames'])
+    assets.update(project.get('appearance', {}).values())
     for name in assets:
         source, destination = (APP/name).resolve(), (package/name).resolve()
         if not source.is_relative_to(APP) or not destination.is_relative_to(package):
@@ -54,7 +66,10 @@ with tempfile.TemporaryDirectory(prefix='build-', dir=WORK) as temporary:
     env['PATH'] = r'C:\Windows\System32'
     env['QT_QPA_PLATFORM'] = 'offscreen'
     def check(exe, report):
-        subprocess.run([str(exe),'--self-test',str(report)], env=env, check=True, timeout=120)
+        result = subprocess.run([str(exe),'--self-test',str(report)], env=env, timeout=120)
+        if result.returncode:
+            failure = report/'self-test-error.txt'
+            raise RuntimeError('打包版自检失败：\n' + (failure.read_text(encoding='utf-8') if failure.exists() else str(result.returncode)))
         assert json.loads((report/'self-test.json').read_text(encoding='utf-8'))['result'] == 'PASS'
     check(package/'点点.exe', stage/'check')
     archive = stage/f'点点桌宠-v{VERSION}-Windows.zip'
@@ -81,6 +96,6 @@ with tempfile.TemporaryDirectory(prefix='build-', dir=WORK) as temporary:
     manifest = {key: release[key] for key in ('schema', 'product', 'series', 'version', 'buildNumber')}
     manifest.update(platform='windows-x64', url='', size=archive.stat().st_size,
                     sha256=hashlib.sha256(archive.read_bytes()).hexdigest(),
-                    notes='v1 写实二维桌宠：新增可选更新、下载校验和安装重启；可保留自行编辑的叫声、动作与互动。')
+                    notes='v1 二维桌宠：新增个人照片生成整套玄凤外观；自备图像服务 API Key，支持分组生成、预览替换与恢复默认。')
     (OUTPUT/'latest-v1.template.json').write_text(json.dumps(manifest, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
     print(f'PASS: v{VERSION}; {archive.stat().st_size/1024**2:.1f} MiB; source + packaged + relocated checks')

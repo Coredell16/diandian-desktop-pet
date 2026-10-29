@@ -3,6 +3,8 @@
 /work/
 /build/
 /dist/
+# Personal generated pet images stay local unless deliberately shared
+/app/appearance/
 
 # Unity generated files; keep Assets (including .meta), Packages and ProjectSettings
 /unity/Diandian/[Ll]ibrary/

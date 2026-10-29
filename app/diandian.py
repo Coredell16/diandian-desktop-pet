@@ -138,6 +138,20 @@ def load_frames(size, dpr, project=None, root=ROOT):
         outline = [(260+px-eye_x, 210+py-eye_y) for px, py in paths[i]]
         flight.append(render(sheet, (x * sx, y * sy, w * sx, h * sy),
                              (260+x-eye_x, 210+y-eye_y, w, h), (700,640), outline))
+    if (project or {}).get('appearance'):
+        from appearance import GROUPS, read_image, sheet_cells
+        for group, start in zip(GROUPS, (0, 8, 16, 0)):
+            cells = sheet_cells(read_image(asset_path(root, project['appearance'][group])))
+            flying = group == 'flight'
+            target = flight if flying else normal
+            canvas = (700, 640) if flying else (500, 440)
+            center, bottom = (350, 610) if flying else (210, 420)
+            limit_w, limit_h = (620, 580) if flying else (380, 390)
+            for i, cell in enumerate(cells):
+                factor = min(limit_w / cell.width(), limit_h / cell.height())
+                w, h = cell.width() * factor, cell.height() * factor
+                target[start + i] = render(QPixmap.fromImage(cell),
+                    (0, 0, cell.width(), cell.height()), (center - w / 2, bottom - h, w, h), canvas)
     return normal, flight
 
 
@@ -773,7 +787,17 @@ if __name__ == '__main__':
     app.setWindowIcon(QIcon(str(ROOT / 'diandian.ico')))
     app.setQuitOnLastWindowClosed(False)
     if '--self-test' in sys.argv:
-        self_test(app)
+        try:
+            self_test(app)
+        except Exception:
+            import traceback
+            report = Path(sys.argv[2]) if len(sys.argv) > 2 else Path.cwd() / 'work'
+            report.mkdir(parents=True, exist_ok=True)
+            details = traceback.format_exc()
+            (report / 'self-test-error.txt').write_text(details, encoding='utf-8')
+            if sys.stderr:
+                sys.stderr.write(details)
+            sys.exit(1)
         sys.exit(0)
     try:
         if '--wait-parent' in sys.argv:

@@ -27,7 +27,9 @@ def run(app, temporary_root=None):
             return
         raise AssertionError('Invalid update accepted')
 
-    release = {'schema': 1, 'product': u.PRODUCT, 'series': 'v1', 'version': '1.5.2', 'buildNumber': 10502}
+    major, minor, patch_number = map(int, u.VERSION.split('.'))
+    next_version = f'{major}.{minor}.{patch_number + 1}'
+    release = {'schema': 1, 'product': u.PRODUCT, 'series': 'v1', 'version': next_version, 'buildNumber': u.BUILD_NUMBER + 1}
     baseline = dict(release, platform='windows-x64', url='https://updates.example/diandian-v1.zip',
                     size=1, sha256='0' * 64, notes='v1 update')
     assert u.validate_manifest(baseline) == baseline and u.newer(baseline)

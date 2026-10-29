@@ -85,6 +85,16 @@ def validate_project(data, root):
                     raise ValueError('动作轮廓坐标格式不正确')
                 number(point[0], x, x+w, '轮廓横坐标')
                 number(point[1], y, y+h, '轮廓纵坐标')
+    if 'appearance' in data:
+        from appearance import GROUPS, read_image, sheet_cells
+        appearance = data['appearance']
+        if not isinstance(appearance, dict) or set(appearance) != set(GROUPS) or len(frames) < 8:
+            raise ValueError('个人外观需要完整的四组动作图和默认互动姿态。')
+        for name in appearance.values():
+            path = asset_path(root, name)
+            if path.suffix.lower() != '.png':
+                raise ValueError('个人外观动作图必须使用 PNG。')
+            sheet_cells(read_image(path))
     for key, action in actions.items():
         if not isinstance(key, str) or not re.fullmatch(r'[a-zA-Z0-9_-]+', key) or key in ('idle','fly','land') or not isinstance(action, dict):
             raise ValueError('动作编号无效或使用了保留名称')

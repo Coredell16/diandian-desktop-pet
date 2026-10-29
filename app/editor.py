@@ -17,6 +17,7 @@ from PyQt5.QtWidgets import (QAbstractItemView, QCheckBox, QComboBox, QDialog,
     QScrollArea, QSpinBox, QTabWidget, QVBoxLayout, QWidget)
 
 from content import asset_path, validate_project
+from updater import VERSION
 
 
 BUILTIN_ACTIONS = {'pet', 'eat', 'look', 'walk', 'curious', 'bite', 'rock', 'stretch'}
@@ -158,7 +159,7 @@ class ProjectEditor(QDialog):
         self.audio.setVolume(0.3)
         self.audio.statusChanged.connect(self.audio_ready)
         self.setAttribute(Qt.WA_DeleteOnClose)
-        self.setWindowTitle('点点 · 可视化编辑器')
+        self.setWindowTitle(f'玄凤点点桌宠 · v{VERSION} 可视化编辑器')
         self.resize(1060, 760)
         self.setMinimumSize(920, 650)
         self.setStyleSheet('''
@@ -180,14 +181,20 @@ class ProjectEditor(QDialog):
         ''')
         layout = QVBoxLayout(self)
         layout.setContentsMargins(22, 18, 22, 18)
-        heading = QLabel('点点工作台')
+        heading = QLabel(f'玄凤点点工作台 · v{VERSION}')
         heading.setObjectName('heading')
         layout.addWidget(heading)
-        description = QLabel('试听叫声、编排动作，调整点点如何回应你。保存后立即生效。')
+        description = QLabel('生成自己的玄凤外观，试听叫声、编排动作。预览满意后，保存并应用。')
         description.setObjectName('muted')
         layout.addWidget(description)
         body = QHBoxLayout()
         self.tabs = QTabWidget()
+        from appearance import AppearancePage
+        self.appearance = AppearancePage(self)
+        appearance_scroll = QScrollArea()
+        appearance_scroll.setWidgetResizable(True)
+        appearance_scroll.setWidget(self.appearance)
+        self.tabs.addTab(appearance_scroll, '外观生成')
         self.build_sounds()
         self.build_actions()
         self.build_interactions()
@@ -764,4 +771,5 @@ class ProjectEditor(QDialog):
                 return
         self.stop_sound()
         self.preview.timer.stop()
+        self.appearance.shutdown()
         event.accept()

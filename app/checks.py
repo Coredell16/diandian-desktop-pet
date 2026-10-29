@@ -8,7 +8,7 @@ import time
 from pathlib import Path
 
 from PyQt5.QtCore import QEvent, QPoint, QPointF, QRectF, QSettings, Qt
-from PyQt5.QtGui import QImage, QMouseEvent, QPainter
+from PyQt5.QtGui import QFontDatabase, QImage, QMouseEvent, QPainter
 from PyQt5.QtMultimedia import QSoundEffect
 from PyQt5.QtTest import QTest
 from PyQt5.QtWidgets import QApplication, QMenu
@@ -19,6 +19,10 @@ def run(app):
     from content import asset_path, load_project, save_project, validate_project
 
     assert app.platformName() == 'offscreen', 'Set QT_QPA_PLATFORM=offscreen before QApplication.'
+    # The offscreen plugin does not always discover the Windows CJK fonts.
+    font = Path('C:/Windows/Fonts/msyh.ttc')
+    if font.is_file():
+        QFontDatabase.addApplicationFont(str(font))
     output = Path(sys.argv[2]).resolve() if len(sys.argv) > 2 else Path.cwd() / 'work'
     output.mkdir(parents=True, exist_ok=True)
     output = output.resolve()
@@ -508,6 +512,8 @@ def run(app):
 
     from update_checks import run as check_updates
     checked.extend(check_updates(app, output))
+    from appearance_checks import run as check_appearances
+    checked.extend(check_appearances(app, output))
     report = {'result': 'PASS', 'version': VERSION, 'checks': checked,
               'initial_texture_bytes': pixels, 'elapsed_seconds': round(time.perf_counter() - started, 3),
               'audio_note': 'Playback was tested with volume zero; no human listening assessment.'}

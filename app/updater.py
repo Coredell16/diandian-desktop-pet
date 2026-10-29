@@ -20,8 +20,8 @@ from PyQt5.QtWidgets import (QApplication, QCheckBox, QDialog, QHBoxLayout,
                             QInputDialog, QLabel, QMessageBox, QProgressBar,
                             QPushButton, QTextBrowser, QVBoxLayout)
 
-VERSION = '1.5.1'
-BUILD_NUMBER = 10501
+VERSION = '1.6.0'
+BUILD_NUMBER = 10600
 PRODUCT = 'diandian-v1'
 SERIES = 'v1'
 MAX_DOWNLOAD = 512 * 1024**2
@@ -215,6 +215,12 @@ def content_files(root):
         raise ValueError('个人编辑项目的素材列表无效。')
     names = {'project.json', 'motions.png', 'curious.png', 'flight.png', 'diandian.ico'}
     names.update(item['file'] for key in ('sounds', 'frames') for item in data[key])
+    if 'appearance' in data:
+        from appearance import GROUPS
+        appearance = data['appearance']
+        if not isinstance(appearance, dict) or set(appearance) != set(GROUPS) or any(not isinstance(name, str) for name in appearance.values()):
+            raise ValueError('个人外观的四组动作图列表无效。')
+        names.update(appearance.values())
     for name in names:
         relative = relative_path(name)
         if name != 'project.json' and relative.suffix.lower() not in ('.png', '.wav', '.ico'):
