@@ -23,7 +23,7 @@ git lfs install
 git clone https://github.com/Coredell16/diandian-desktop-pet.git
 ```
 
-私有仓库需要有访问权限的 GitHub 账号。大型三维素材通过 Git LFS 保存；若克隆时未取回素材，在项目目录运行 `git lfs pull`。
+大型三维素材通过 Git LFS 保存；若克隆时未取回素材，在项目目录运行 `git lfs pull`。
 
 ## GitHub 同步范围
 
@@ -32,3 +32,7 @@ git clone https://github.com/Coredell16/diandian-desktop-pet.git
 `.gitignore` 排除 Unity 缓存、日志、本机设置、Python 缓存，以及 `outputs/` 和构建临时目录。忽略规则不会删除本机文件；历史安装包和归档仍保留在本机，不会随源码自动备份。
 
 需要分享安装包时，可另行上传到 GitHub Releases。修改源码后，需要提交并推送才会同步到 GitHub；朋友的客户端自动更新还需要单独配置发布地址，详见项目说明。
+
+## 问题反馈
+
+使用中如有问题，请联系邮箱：[coredell116@gmail.com](mailto:coredell116@gmail.com)。
