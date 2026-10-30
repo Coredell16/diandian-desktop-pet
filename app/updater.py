@@ -20,8 +20,8 @@ from PyQt5.QtWidgets import (QApplication, QCheckBox, QDialog, QHBoxLayout,
                             QInputDialog, QLabel, QMessageBox, QProgressBar,
                             QPushButton, QTextBrowser, QVBoxLayout)
 
-VERSION = '1.6.2'
-BUILD_NUMBER = 10602
+VERSION = '1.6.3'
+BUILD_NUMBER = 10603
 PRODUCT = 'diandian-v1'
 SERIES = 'v1'
 MAX_DOWNLOAD = 512 * 1024**2

@@ -96,6 +96,6 @@ with tempfile.TemporaryDirectory(prefix='build-', dir=WORK) as temporary:
     manifest = {key: release[key] for key in ('schema', 'product', 'series', 'version', 'buildNumber')}
     manifest.update(platform='windows-x64', url='', size=archive.stat().st_size,
                     sha256=hashlib.sha256(archive.read_bytes()).hexdigest(),
-                    notes='v1 二维桌宠：新增全屏走动和固定位置选择，支持屏幕内横向、纵向和斜向散步，并自动记住选择。')
+                    notes='v1 二维桌宠：新增宠物名字与始终置于顶层设置；改名即时更新称呼，两项选择均自动保存。')
     (OUTPUT/'latest-v1.template.json').write_text(json.dumps(manifest, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
     print(f'PASS: v{VERSION}; {archive.stat().st_size/1024**2:.1f} MiB; source + packaged + relocated checks')

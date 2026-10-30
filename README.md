@@ -4,10 +4,10 @@ Cockatiel Diandian Desktop Pet
 
 Windows 玄凤鹦鹉桌面宠物项目，同时维护二维与 Unity 三维两条版本路线。
 
-- **v1.6 二维版**：Python 桌宠、帧动画、叫声、互动和可视化编辑器，支持个人照片生成整套外观；本地 v1.6.2 支持全屏走动或固定位置，保留 v1.6.1 的动作平稳性改进。
+- **v1.6 二维版**：Python 桌宠、帧动画、叫声、互动和可视化编辑器，支持个人照片生成整套外观；v1.6.3 支持自定义宠物名字和始终置顶设置，保留全屏走动及动作平稳性改进。
 - **v2 三维版（制作中）**：Unity 工程，包含三维模型、骨骼、展翅和桌面窗口功能。**目前仅为初版，三维建模仍在制作中，模型细节和整体精细度尚待完善。**
 
-Windows 运行版：[下载 v1.6.2 分享包](https://github.com/Coredell16/diandian-desktop-pet/releases/tag/v1.6.2)。完整解压后运行“点点.exe”，无需安装 Python。
+Windows 运行版：[下载 v1.6.3 分享包](https://github.com/Coredell16/diandian-desktop-pet/releases/tag/v1.6.3)。完整解压后运行“点点.exe”，无需安装 Python。
 
 已有带更新功能的 v1 版本，可在“更新 v1… → 设置更新地址…”填写 [v1 更新清单](https://raw.githubusercontent.com/Coredell16/diandian-desktop-pet/main/updates/v1.json)，然后检查更新。新版已内置该地址；旧版填写一次后会保留。
 

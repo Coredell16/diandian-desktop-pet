@@ -160,7 +160,6 @@ class ProjectEditor(QDialog):
         self.audio.setVolume(0.3)
         self.audio.statusChanged.connect(self.audio_ready)
         self.setAttribute(Qt.WA_DeleteOnClose)
-        self.setWindowTitle(f'玄凤点点桌宠 · v{VERSION} 可视化编辑器')
         self.resize(1060, 760)
         self.setMinimumSize(920, 650)
         self.setStyleSheet('''
@@ -182,9 +181,11 @@ class ProjectEditor(QDialog):
         ''')
         layout = QVBoxLayout(self)
         layout.setContentsMargins(22, 18, 22, 18)
-        heading = QLabel(f'玄凤点点工作台 · v{VERSION}')
-        heading.setObjectName('heading')
-        layout.addWidget(heading)
+        self.heading = QLabel()
+        self.heading.setTextFormat(Qt.PlainText)
+        self.heading.setObjectName('heading')
+        layout.addWidget(self.heading)
+        self.refresh_identity()
         description = QLabel('生成自己的玄凤外观，试听叫声、编排动作。预览满意后，保存并应用。')
         description.setObjectName('muted')
         layout.addWidget(description)
@@ -238,6 +239,10 @@ class ProjectEditor(QDialog):
         self.refresh_sound_list()
         self.refresh_action_list()
         self.load_interactions()
+
+    def refresh_identity(self):
+        self.setWindowTitle(f'{self.pet.pet_name} · v{VERSION} 可视化编辑器')
+        self.heading.setText(f'{self.pet.pet_name}的工作台 · v{VERSION}')
 
     @contextmanager
     def filling(self):
@@ -685,8 +690,8 @@ class ProjectEditor(QDialog):
         self.double_action = QComboBox()
         self.click_action.currentIndexChanged.connect(self.change_interactions)
         self.double_action.currentIndexChanged.connect(self.change_interactions)
-        form.addRow('单击点点', self.click_action)
-        form.addRow('双击点点', self.double_action)
+        form.addRow('单击宠物', self.click_action)
+        form.addRow('双击宠物', self.double_action)
         self.intervals = {}
         for title, first, second, low, high in [
                 ('自主活动间隔（秒）', 'idle_min', 'idle_max', 1, 3600),

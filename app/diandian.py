@@ -10,7 +10,8 @@ from PyQt5.QtCore import QCoreApplication, QPoint, QPointF, QRectF, QSettings, Q
 from PyQt5.QtGui import QColor, QFont, QIcon, QImage, QPainter, QPainterPath, QPixmap
 from PyQt5.QtNetwork import QLocalServer, QLocalSocket
 from PyQt5.QtMultimedia import QSoundEffect
-from PyQt5.QtWidgets import QAction, QActionGroup, QApplication, QMenu, QMessageBox, QSystemTrayIcon, QWidget
+from PyQt5.QtWidgets import (QAction, QActionGroup, QApplication, QInputDialog,
+                            QLineEdit, QMenu, QMessageBox, QSystemTrayIcon, QWidget)
 
 from content import load_project, save_project, validate_project, asset_path
 from updater import VERSION, Updater, activate_install, launch_newer, persistent_root, wait_parent
@@ -183,6 +184,15 @@ def motion_strength(elapsed, duration):
     return smooth_step(elapsed / SETTLE_SECONDS) * smooth_step((duration - elapsed) / SETTLE_SECONDS)
 
 
+def normalize_pet_name(value):
+    if not isinstance(value, str):
+        raise ValueError('名字需为文字。')
+    name = value.strip() or '点点'
+    if len(name) > 20 or any(not char.isprintable() for char in name):
+        raise ValueError('名字请控制在 20 个字符以内，且不能包含换行或控制字符。')
+    return name
+
+
 def action_pair(item, elapsed):
     seq = item['frames']
     stop = action_stop(item)
@@ -254,13 +264,18 @@ class Diandian(QWidget):
     def __init__(self, settings=None, content_root=None):
         super().__init__()
         self.settings = settings if settings is not None else QSettings(QSettings.IniFormat, QSettings.UserScope, 'Diandian', 'DesktopPet')
+        try:
+            self.pet_name = normalize_pet_name(self.settings.value('pet_name', '点点'))
+        except ValueError:
+            self.pet_name = '点点'
+        self.always_on_top = self.settings.value('always_on_top', True, type=bool)
         self.content_root = Path(content_root or ROOT)
         self.project = load_project(self.content_root)
         self.editor = None
         self.preview_blends = {}
         self.restoring = True
-        self.setWindowTitle('点点 · 珍珠玄凤桌宠 v' + VERSION)
-        self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Tool)
+        self.setWindowFlags(Qt.FramelessWindowHint | Qt.Tool)
+        self.setWindowFlag(Qt.WindowStaysOnTopHint, self.always_on_top)
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setAttribute(Qt.WA_ShowWithoutActivating)
         self.setMouseTracking(True)
@@ -312,12 +327,10 @@ class Diandian(QWidget):
         if isinstance(position, QPoint):
             self.move(position)
             self.keep_on_screen()
-        self.setToolTip('点点 v' + VERSION + '：单击摸摸 · 拖动展翅 · 双击伸翅 · 右键菜单')
         self.tray = QSystemTrayIcon(QIcon(str(self.content_root / 'diandian.ico')), self)
         self.updater = Updater(self, PROGRAM_ROOT)
-        self.tray.setToolTip('点点 v' + VERSION + ' · 写实二维桌宠')
         self.tray.activated.connect(self.tray_clicked)
-        self.refresh_tray_menu()
+        self.refresh_identity()
         self.tray.show()
         self.click_timer = QTimer(self)
         self.click_timer.setSingleShot(True)
@@ -347,9 +360,48 @@ class Diandian(QWidget):
             return
         for key, value in [('size', self.size_px), ('volume', self.volume), ('muted', self.muted),
                            ('auto_calls', self.auto_calls), ('lively', self.lively),
+                           ('pet_name', self.pet_name), ('always_on_top', self.always_on_top),
                            ('movement_mode', self.movement_mode), ('position', self.pos())]:
             self.settings.setValue(key, value)
         self.settings.sync()
+
+    def refresh_identity(self):
+        self.setWindowTitle(self.pet_name + ' · 珍珠玄凤桌宠 v' + VERSION)
+        self.setToolTip(self.pet_name + ' v' + VERSION + '：单击摸摸 · 拖动展翅 · 双击伸翅 · 右键菜单')
+        self.tray.setToolTip(self.pet_name + ' v' + VERSION + ' · 写实二维桌宠')
+        if self.editor is not None:
+            self.editor.refresh_identity()
+        self.refresh_tray_menu()
+
+    def set_pet_name(self, value):
+        self.pet_name = normalize_pet_name(value)
+        self.refresh_identity()
+        self.say('你好，我是' + self.pet_name)
+        self.save_settings()
+
+    def rename_pet(self):
+        self.cancel_click()
+        value, accepted = QInputDialog.getText(self, '宠物名字',
+            '输入宠物名字（最多 20 个字符，留空恢复“点点”）：', QLineEdit.Normal, self.pet_name)
+        if accepted:
+            try:
+                self.set_pet_name(value)
+            except ValueError as error:
+                QMessageBox.warning(self, '名字未修改', str(error))
+
+    def set_always_on_top(self, enabled):
+        self.cancel_click()
+        enabled = bool(enabled)
+        if enabled == self.always_on_top:
+            return
+        self.always_on_top = enabled
+        position, visible = self.pos(), self.isVisible()
+        self.setWindowFlag(Qt.WindowStaysOnTopHint, enabled)
+        if visible:
+            self.show()
+        self.move(position)
+        self.refresh_tray_menu()
+        self.save_settings()
 
     def cancel_click(self):
         if hasattr(self, 'click_timer'):
@@ -758,15 +810,22 @@ class Diandian(QWidget):
                            'QMenu::item { padding: 7px 20px; }'
                            'QMenu::item:selected { background: #eee5ce; border-radius: 5px; }'
                            'QMenu::separator { height: 1px; background: #e7e0d0; margin: 5px 9px; }')
-        title = menu.addAction('点点 · v' + VERSION)
+        name = self.pet_name.replace('&', '&&')
+        title = menu.addAction(name + ' · v' + VERSION)
         title.setEnabled(False)
+        menu.addAction('宠物名字…', self.rename_pet)
+        top_action = menu.addAction('始终置于顶层')
+        top_action.setCheckable(True)
+        top_action.setChecked(self.always_on_top)
+        top_action.triggered.connect(self.set_always_on_top)
         menu.addSeparator()
         interaction = menu.addMenu('互动')
         motions = menu.addMenu('动作')
         for key, item in self.project['actions'].items():
             if item['enabled']:
                 target = interaction if item['category'] == '互动' else motions
-                target.addAction(item['label'], lambda checked=False, k=key: self.play_action(k))
+                label = ('摸摸' + name) if key == 'pet' and item['label'] == '摸摸点点' else item['label']
+                target.addAction(label, lambda checked=False, k=key: self.play_action(k))
         interaction.addAction('叫一声', lambda: self.call(force=True))
         motions.addSeparator()
         lively_action = motions.addAction('自己活动', self.toggle_lively)
@@ -805,11 +864,11 @@ class Diandian(QWidget):
         size_menu.addSeparator()
         size_menu.addAction('回到右下角', self.home)
         menu.addSeparator()
-        menu.addAction('叫醒点点' if self.sleeping else '休息一会儿', self.toggle_sleep)
+        menu.addAction('叫醒' + name if self.sleeping else '休息一会儿', self.toggle_sleep)
         menu.addSeparator()
-        menu.addAction('编辑点点…', self.open_editor)
+        menu.addAction('编辑' + name + '…', self.open_editor)
         menu.addAction('更新 v1…', self.updater.open)
-        menu.addAction('退出点点', QApplication.instance().quit)
+        menu.addAction('退出' + name, QApplication.instance().quit)
         return menu
 
     def contextMenuEvent(self, event):
@@ -954,11 +1013,11 @@ if __name__ == '__main__':
             connection.deleteLater()
         bird.show()
         bird.raise_()
-        bird.say('点点在这里～')
+        bird.say(bird.pet_name + '在这里～')
 
     server.newConnection.connect(reveal)
     bird.show()
-    bird.say('你好，我是点点')
+    bird.say('你好，我是' + bird.pet_name)
     if '--editor' in sys.argv:
         bird.open_editor()
     sys.exit(app.exec_())

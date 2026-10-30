@@ -323,6 +323,55 @@ def run(app):
             movement_menu.deleteLater()
             checked.append('exclusive fixed/roam menu; two-axis walking and screen bounds; drag/menu/sleep/editor pauses; fixed interactions and independent roaming')
 
+            name_menu = bird.menu()
+            rename_action = next(a for a in name_menu.actions() if a.text() == '宠物名字…')
+            with patch('diandian.QInputDialog.getText', return_value=('  团团  ', True)):
+                rename_action.trigger()
+            assert bird.pet_name == bird.settings.value('pet_name') == '团团'
+            assert bird.windowTitle().startswith('团团') and bird.tray.toolTip().startswith('团团')
+            assert bird.message == '你好，我是团团'
+            with patch('diandian.QInputDialog.getText', return_value=('取消改名', False)):
+                rename_action.trigger()
+            assert bird.pet_name == '团团'
+            for invalid_name in ('a'*21, '团\n团', '团\x00团'):
+                before_settings = bird.settings.value('pet_name')
+                try:
+                    bird.set_pet_name(invalid_name)
+                except ValueError:
+                    pass
+                else:
+                    raise AssertionError('Invalid pet name accepted.')
+                assert bird.pet_name == bird.settings.value('pet_name') == before_settings
+            bird.set_pet_name('小&米🐦')
+            escaped_menu = bird.menu()
+            assert escaped_menu.actions()[0].text().startswith('小&&米🐦')
+            escaped_menu.deleteLater()
+            bird.set_pet_name(' ')
+            assert bird.pet_name == '点点'
+            name_menu.deleteLater()
+
+            position = bird.pos()
+            mode, started = bird.mode, bird.started
+            top_menu = bird.menu()
+            top_action = next(a for a in top_menu.actions() if a.text() == '始终置于顶层')
+            assert top_action.isChecked()
+            top_action.trigger()
+            assert not bird.always_on_top and not bird.windowFlags() & Qt.WindowStaysOnTopHint
+            assert bird.isVisible() and bird.pos() == position
+            assert (bird.mode, bird.started) == (mode, started)
+            assert bird.windowFlags() & Qt.FramelessWindowHint
+            assert bird.testAttribute(Qt.WA_TranslucentBackground)
+            top_action.trigger()
+            assert bird.always_on_top and bird.windowFlags() & Qt.WindowStaysOnTopHint
+            assert bird.isVisible() and bird.pos() == position
+            bird.hide()
+            bird.set_always_on_top(False)
+            assert not bird.isVisible(), 'Changing topmost must not reveal a hidden pet.'
+            bird.set_always_on_top(True)
+            bird.show()
+            top_menu.deleteLater()
+            checked.append('rename/cancel/reset/validation and literal ampersands; topmost toggles preserve visibility, position, animation and transparency')
+
             for direction in (-1, 1):
                 bird.mode = 'idle'
                 bird.direction = direction
@@ -541,6 +590,8 @@ def run(app):
             bird.resize_pet(120)
             bird.set_volume(0.15)
             bird.muted, bird.auto_calls, bird.lively = True, True, False
+            bird.set_pet_name('小米')
+            bird.set_always_on_top(False)
             bird.set_movement_mode('roam')
             bird.move(80, 70)
             expected_position = bird.pos()
@@ -551,15 +602,19 @@ def run(app):
             assert restored.size_px == 120 and abs(restored.volume - 0.15) < 0.001
             assert restored.muted and restored.auto_calls and not restored.lively
             assert restored.movement_mode == 'roam'
+            assert restored.pet_name == '小米' and not restored.always_on_top
+            assert not restored.windowFlags() & Qt.WindowStaysOnTopHint
             assert restored.pos() == expected_position
             restored.hide()
             restored.settings.setValue('position', QPoint(-100000, 100000))
             restored.settings.setValue('size', 999)
             restored.settings.setValue('movement_mode', 'invalid')
+            restored.settings.setValue('pet_name', '坏\n名字')
             restored.settings.sync()
             recovered = make_bird(ini)
             assert recovered.size_px == 150
             assert recovered.movement_mode == 'fixed'
+            assert recovered.pet_name == '点点'
             assert QApplication.primaryScreen().availableGeometry().contains(recovered.geometry())
             assert Path(recovered.settings.fileName()).resolve().parent == scratch
             assert recovered.settings.status() == QSettings.NoError
@@ -574,6 +629,11 @@ def run(app):
             def editor_error(title, error):
                 raise AssertionError(title + ': ' + str(error))
             editor.fail = editor_error
+            bird.editor = editor
+            original_project_bytes = (content_root / 'project.json').read_bytes()
+            bird.set_pet_name('栗子')
+            assert editor.windowTitle().startswith('栗子') and editor.heading.text().startswith('栗子')
+            assert (content_root / 'project.json').read_bytes() == original_project_bytes
             choose_file, choose_files = QFileDialog.getOpenFileName, QFileDialog.getOpenFileNames
             try:
                 editor.sounds.setCurrentRow(0)
@@ -613,6 +673,7 @@ def run(app):
             finally:
                 QFileDialog.getOpenFileName, QFileDialog.getOpenFileNames = choose_file, choose_files
                 editor.draft = copy.deepcopy(editor.saved)
+                bird.editor = None
                 editor.close()
                 bird.apply_project(baseline)
                 bird.timer.stop()
