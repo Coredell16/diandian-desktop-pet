@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "product": "diandian-v1",
+  "series": "v1",
+  "version": "1.6.2",
+  "buildNumber": 10602,
+  "platform": "windows-x64",
+  "url": "https://github.com/Coredell16/diandian-desktop-pet/releases/download/v1.6.2/Cockatiel-Diandian-v1.6.2-Windows.zip",
+  "size": 51634799,
+  "sha256": "d60f0d453cb9ac1d8f32ebe3bb474e70c3269f98c663b6a1f5477342d33c528c",
+  "notes": "新增全屏走动或固定位置选择，自动保存；改善点击衔接、动作收尾和摇摇车稳定性。新包内置 v1 更新地址。"
+}
