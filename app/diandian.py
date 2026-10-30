@@ -10,7 +10,7 @@ from PyQt5.QtCore import QCoreApplication, QPoint, QPointF, QRectF, QSettings, Q
 from PyQt5.QtGui import QColor, QFont, QIcon, QImage, QPainter, QPainterPath, QPixmap
 from PyQt5.QtNetwork import QLocalServer, QLocalSocket
 from PyQt5.QtMultimedia import QSoundEffect
-from PyQt5.QtWidgets import QAction, QApplication, QMenu, QMessageBox, QSystemTrayIcon, QWidget
+from PyQt5.QtWidgets import QAction, QActionGroup, QApplication, QMenu, QMessageBox, QSystemTrayIcon, QWidget
 
 from content import load_project, save_project, validate_project, asset_path
 from updater import VERSION, Updater, activate_install, launch_newer, persistent_root, wait_parent
@@ -156,9 +156,39 @@ def load_frames(size, dpr, project=None, root=ROOT):
 
 
 
+SETTLE_SECONDS = .28
+
+
+def action_stop(item):
+    stop = item['duration']
+    if item['loop'] and item['frames']:
+        cycle = len(item['frames']) / item['fps']
+        boundary = math.ceil(stop / cycle - 1e-9) * cycle
+        # Finish a nearby cycle, without extending long custom animations.
+        if boundary - stop <= .3:
+            stop = boundary
+    return stop
+
+
+def action_duration(item):
+    return action_stop(item) + SETTLE_SECONDS
+
+
+def smooth_step(value):
+    value = max(0.0, min(1.0, value))
+    return value * value * (3 - 2 * value)
+
+
+def motion_strength(elapsed, duration):
+    return smooth_step(elapsed / SETTLE_SECONDS) * smooth_step((duration - elapsed) / SETTLE_SECONDS)
+
+
 def action_pair(item, elapsed):
     seq = item['frames']
-    phase = max(0, elapsed) * item['fps']
+    stop = action_stop(item)
+    if elapsed >= stop + SETTLE_SECONDS:
+        return 0, 0, 0.0
+    phase = min(stop, max(0, elapsed)) * item['fps']
     step = int(phase)
     blend = phase-step
     blend = blend*blend*(3-2*blend)
@@ -166,9 +196,14 @@ def action_pair(item, elapsed):
         first, second = seq[step % len(seq)], seq[(step+1) % len(seq)]
     else:
         first, second = seq[min(step,len(seq)-1)], seq[min(step+1,len(seq)-1)]
+    if elapsed >= stop:
+        first = first if blend < .5 else second
+        second = 0
+        blend = smooth_step((elapsed - stop) / SETTLE_SECONDS)
     # Raised and resting crests are mutually exclusive poses, never transparent layers.
     if first >= 8 or second >= 8 or 3 in (first, second):
-        pose = first if blend < .5 else second
+        # Let a distinct silhouette settle fully before returning to idle.
+        pose = first if elapsed >= stop or blend < .5 else second
         return pose, pose, 0.0
     return first, second, blend
 
@@ -198,20 +233,21 @@ def pose_sprite(sprites, first, second, weight, cache):
     return cache[key][round(weight * 6)]
 
 
-def apply_motion(painter, motion, elapsed, size):
-    factor = size/150
+def apply_motion(painter, motion, elapsed, size, duration=None):
+    strength = motion_strength(elapsed, duration) if duration is not None else 1.0
+    factor = size/150 * strength
     if motion == 'bite':
         # Reach once, close the beak, and settle; crest poses come from the atlas.
         reach = max(0, math.sin(min(1, max(0, elapsed)/1.3)*math.pi))
         painter.translate(-8*factor*reach, 2*factor*reach)
     elif motion == 'rock':
         painter.translate(size*.42,size*.84)
-        painter.rotate(math.sin(elapsed*math.tau*.75)*5)
+        painter.rotate(math.sin(elapsed*math.tau*.75)*3*strength)
         painter.translate(-size*.42,-size*.84)
     elif motion == 'pet':
-        painter.translate(0,-abs(math.sin(elapsed*3))*2*factor)
+        painter.translate(0,-math.sin(elapsed*3)**2*1.5*factor)
     elif motion == 'walk':
-        painter.translate(0,-abs(math.sin(elapsed*11))*1.5*factor)
+        painter.translate(0,-math.sin(elapsed*11)**2*factor)
 
 
 class Diandian(QWidget):
@@ -240,6 +276,11 @@ class Diandian(QWidget):
         self.started = time.monotonic()
         self.direction = -1
         self.walk_remainder = 0.0
+        self.walk_remainder_y = 0.0
+        self.walk_target = None
+        self.movement_mode = self.settings.value('movement_mode', 'fixed')
+        if self.movement_mode not in ('fixed', 'roam'):
+            self.movement_mode = 'fixed'
         self.last_tick = time.monotonic()
         self.next_action = time.monotonic() + random.uniform(6, 12)
         self.lively = self.settings.value('lively', True, type=bool)
@@ -253,6 +294,7 @@ class Diandian(QWidget):
         self.dragged = False
         self.menu_open = False
         self.hovered = False
+        self.hover_angle = 0.0
         self.muted = self.settings.value('muted', False, type=bool)
         self.volume = max(0.0, min(1.0, self.settings.value('volume', 0.30, type=float)))
         self.auto_calls = self.settings.value('auto_calls', False, type=bool)
@@ -270,7 +312,6 @@ class Diandian(QWidget):
         if isinstance(position, QPoint):
             self.move(position)
             self.keep_on_screen()
-        self.roam_center = self.x()
         self.setToolTip('点点 v' + VERSION + '：单击摸摸 · 拖动展翅 · 双击伸翅 · 右键菜单')
         self.tray = QSystemTrayIcon(QIcon(str(self.content_root / 'diandian.ico')), self)
         self.updater = Updater(self, PROGRAM_ROOT)
@@ -293,6 +334,7 @@ class Diandian(QWidget):
         dpr = self.devicePixelRatioF()
         self.scaled, self.flight_scaled = load_frames(size, dpr, self.project, self.content_root)
         self.blends = {}
+        self.walk_target = None
         if self.isVisible():
             self.keep_on_screen()
         if hasattr(self, 'tray'):
@@ -304,7 +346,8 @@ class Diandian(QWidget):
         if self.restoring:
             return
         for key, value in [('size', self.size_px), ('volume', self.volume), ('muted', self.muted),
-                           ('auto_calls', self.auto_calls), ('lively', self.lively), ('position', self.pos())]:
+                           ('auto_calls', self.auto_calls), ('lively', self.lively),
+                           ('movement_mode', self.movement_mode), ('position', self.pos())]:
             self.settings.setValue(key, value)
         self.settings.sync()
 
@@ -315,14 +358,60 @@ class Diandian(QWidget):
     def home(self):
         area = QApplication.primaryScreen().availableGeometry()
         self.move(area.right() - self.width() - 12, area.bottom() - self.height() - 5)
-        self.roam_center = self.x()
+        self.walk_target = None
         self.save_settings()
 
-    def keep_on_screen(self):
+    def screen_area(self):
         screen = QApplication.screenAt(self.frameGeometry().center()) or QApplication.primaryScreen()
-        area = screen.availableGeometry()
+        return screen.availableGeometry()
+
+    def keep_on_screen(self):
+        area = self.screen_area()
         self.move(max(area.left(), min(self.x(), area.right() - self.width() + 1)),
                   max(area.top(), min(self.y(), area.bottom() - self.height() + 1)))
+
+    def walk_on_screen(self, distance):
+        area = self.screen_area()
+        right = max(area.left(), area.right() - self.width() + 1)
+        bottom = max(area.top(), area.bottom() - self.height() + 1)
+        if (self.walk_target is None or not area.left() <= self.walk_target.x() <= right
+                or not area.top() <= self.walk_target.y() <= bottom):
+            self.walk_target = QPointF(random.randint(area.left(), right), random.randint(area.top(), bottom))
+        origin = QPointF(self.x() + self.walk_remainder, self.y() + self.walk_remainder_y)
+        delta = self.walk_target - origin
+        remaining = math.hypot(delta.x(), delta.y())
+        if remaining < .01:
+            self.walk_target = None
+            return
+        if delta.x():
+            self.direction = 1 if delta.x() > 0 else -1
+        position = origin + delta * (min(distance, remaining) / remaining)
+        point = QPoint(round(position.x()), round(position.y()))
+        self.walk_remainder = position.x() - point.x()
+        self.walk_remainder_y = position.y() - point.y()
+        self.move(point)
+        self.keep_on_screen()
+        if self.pos() != point:
+            self.walk_remainder = self.walk_remainder_y = 0.0
+            self.walk_target = None
+        elif distance >= remaining:
+            self.walk_target = None
+
+    def set_movement_mode(self, mode):
+        if mode not in ('fixed', 'roam'):
+            raise ValueError('未知的走动模式')
+        self.cancel_click()
+        self.movement_mode = mode
+        self.walk_target = None
+        self.walk_remainder = self.walk_remainder_y = 0.0
+        if mode == 'roam' and self.mode == 'idle' and not self.sleeping:
+            walk = next((key for key, item in self.project['actions'].items()
+                         if item['enabled'] and item['motion'] == 'walk'), None)
+            if walk:
+                self.play_action(walk)
+        self.say('可以在屏幕里散步啦' if mode == 'roam' else '就在这里陪你')
+        self.refresh_tray_menu()
+        self.save_settings()
 
     def say(self, text, seconds=2.8):
         self.message = text
@@ -337,7 +426,8 @@ class Diandian(QWidget):
         if not item or not item['enabled']:
             return
         self.sleeping = False
-        self.start_action(action)
+        if not self.start_action(action):
+            return
         if item['message']:
             self.say(item['message'])
         sound = item['sound']
@@ -401,13 +491,15 @@ class Diandian(QWidget):
             painter.drawPixmap(QPointF(-size*.2,-size*.2),flight[index])
         else:
             first, second, weight = action_pair(item, elapsed)
-            apply_motion(painter, item['motion'], elapsed, size)
+            apply_motion(painter, item['motion'], elapsed, size, action_duration(item))
             painter.drawPixmap(0, 0, pose_sprite(normal, first, second, weight, self.preview_blends))
         painter.restore()
 
     def start_action(self, action):
         self.cancel_click()
         now = time.monotonic()
+        if action == self.mode and action not in ('fly', 'land', 'stretch') and now < self.until:
+            return False
         in_flight = self.mode in ('fly', 'land', 'stretch')
         if in_flight:
             self.advance_flight(now)
@@ -426,12 +518,15 @@ class Diandian(QWidget):
                 self.flight_steps = closing + [1, 2, 3] + [4] * 18 + [3, 2, 1, 0]
         self.mode = action
         self.started = now
-        self.until = float('inf') if action in ('fly', 'land', 'stretch') else now + self.project['actions'].get(action, {}).get('duration', 2)
+        item = self.project['actions'].get(action)
+        self.until = float('inf') if action in ('fly', 'land', 'stretch') else now + (action_duration(item) if item else 2)
         if self.project['actions'].get(action, {}).get('motion') == 'walk':
-            self.direction = 1 if self.x() < self.roam_center - 30 else -1
+            if self.movement_mode == 'roam':
+                self.walk_on_screen(0)
         if hasattr(self, 'timer'):
             self.timer.setInterval(16)
         self.update()
+        return True
 
     def advance_flight(self, now):
         while self.mode in ('fly', 'land', 'stretch') and now >= self.flight_next_at:
@@ -489,7 +584,9 @@ class Diandian(QWidget):
             painter.translate(self.size_px, 0)
             painter.scale(-1, 1)
         if not flying:
-            apply_motion(painter, self.project['actions'].get(self.mode, {}).get('motion', 'none'), now-self.started, self.size_px)
+            item = self.project['actions'].get(self.mode)
+            if item:
+                apply_motion(painter, item['motion'], now-self.started, self.size_px, action_duration(item))
         painter.drawPixmap(QPointF(offset, offset), sprite)
         painter.restore()
 
@@ -574,6 +671,10 @@ class Diandian(QWidget):
         self.advance_flight(now)
         delta = min(now - self.last_tick, 0.1)
         self.last_tick = now
+        target_angle = -2.0 if self.hovered and not self.sleeping and self.mode == 'idle' else 0.0
+        self.hover_angle += (target_angle - self.hover_angle) * (1 - math.exp(-delta / .1))
+        if abs(target_angle - self.hover_angle) < .01:
+            self.hover_angle = target_angle
         if now >= self.blink_at:
             self.blink_until = now + 0.18
             self.blink_at = now + random.uniform(3.0, 7.0)
@@ -582,23 +683,24 @@ class Diandian(QWidget):
         if self.dragged and self.drag_target is not None and self.drag_origin is not None:
             if self.pos() != self.drag_target:
                 self.move(self.drag_target)
-        if self.project['actions'].get(self.mode, {}).get('motion') == 'walk' and self.drag_origin is None and not self.menu_open:
-            self.walk_remainder += delta * self.direction * 18
-            step = int(self.walk_remainder)
-            self.walk_remainder -= step
-            self.move(self.x() + step, self.y())
-            self.keep_on_screen()
+        if (self.movement_mode == 'roam' and self.project['actions'].get(self.mode, {}).get('motion') == 'walk'
+                and self.drag_origin is None and not self.menu_open and not self.sleeping and self.editor is None):
+            item = self.project['actions'][self.mode]
+            self.walk_on_screen(delta * 36 * motion_strength(now-self.started, action_duration(item)))
         if (now >= self.next_action and self.mode == 'idle' and not self.sleeping
                 and self.drag_origin is None and not self.menu_open and not self.click_timer.isActive() and self.editor is None):
-            candidates = [(key,a['auto_weight']) for key,a in self.project['actions'].items() if a['enabled'] and a['auto_weight'] > 0]
-            if self.lively and candidates:
+            candidates = [(key, a['auto_weight']) for key, a in self.project['actions'].items()
+                          if a['enabled'] and a['auto_weight'] > 0
+                          and (self.lively or (self.movement_mode == 'roam' and a['motion'] == 'walk'))
+                          and (self.movement_mode == 'roam' or a['motion'] != 'walk')]
+            if candidates:
                 self.play_action(random.choices([x[0] for x in candidates], weights=[x[1] for x in candidates])[0])
             self.next_action = now + random.uniform(self.project['interactions']['idle_min'], self.project['interactions']['idle_max'])
         if now >= self.next_call:
             if self.auto_calls and not self.menu_open and self.drag_origin is None:
                 self.call()
             self.next_call = now + random.uniform(self.project['interactions']['call_min'], self.project['interactions']['call_max'])
-        interval = 250 if self.sleeping else (50 if self.mode == 'idle' else 16)
+        interval = 250 if self.sleeping else (50 if self.mode == 'idle' and self.hover_angle == target_angle else 16)
         if self.timer.interval() != interval:
             self.timer.setInterval(interval)
         self.update()
@@ -608,15 +710,14 @@ class Diandian(QWidget):
         p = QPainter(self)
         p.setRenderHint(QPainter.Antialiasing)
         p.setRenderHint(QPainter.SmoothPixmapTransform)
-        angle = 0.0
+        angle = self.hover_angle
         hop = 0.0
         if self.mode == 'fly':
             hop = math.sin((now-self.started)*math.tau*2)*0.6
-        elif self.hovered and not self.sleeping and self.mode == 'idle':
-            angle = -2.0
         breath = math.sin(now * (1.8 if self.sleeping else 2.4)) * 0.7
         p.save()
-        p.translate(36 + self.size_px * 0.42 + self.walk_remainder, 65 + self.size_px * 0.95 + hop)
+        p.translate(36 + self.size_px * 0.42 + self.walk_remainder,
+                    65 + self.size_px * 0.95 + hop + self.walk_remainder_y)
         p.rotate(angle)
         p.scale(1, 1 + breath / self.size_px)
         p.translate(-self.size_px * 0.42, -self.size_px * 0.95)
@@ -694,6 +795,14 @@ class Diandian(QWidget):
             action.triggered.connect(lambda checked, s=size: self.resize_pet(s))
             size_menu.addAction(action)
         size_menu.addSeparator()
+        movement_group = QActionGroup(size_menu)
+        movement_group.setExclusive(True)
+        for label, mode in [('全屏走动', 'roam'), ('固定位置', 'fixed')]:
+            action = size_menu.addAction(label, lambda checked=False, m=mode: self.set_movement_mode(m))
+            action.setCheckable(True)
+            action.setChecked(self.movement_mode == mode)
+            movement_group.addAction(action)
+        size_menu.addSeparator()
         size_menu.addAction('回到右下角', self.home)
         menu.addSeparator()
         menu.addAction('叫醒点点' if self.sleeping else '休息一会儿', self.toggle_sleep)
@@ -713,8 +822,6 @@ class Diandian(QWidget):
         if event.button() == Qt.LeftButton:
             self.click_timer.stop()
             self.drag_origin = event.globalPos()
-            if self.mode not in ('fly', 'land', 'stretch'):
-                self.mode = 'idle'
             self.window_origin = self.pos()
             self.dragged = False
             self.setCursor(Qt.ClosedHandCursor)
@@ -742,7 +849,7 @@ class Diandian(QWidget):
             self.drag_target = None
             self.setCursor(Qt.OpenHandCursor)
             self.keep_on_screen()
-            self.roam_center = self.x()
+            self.walk_target = None
             self.save_settings()
 
     def mouseDoubleClickEvent(self, event):

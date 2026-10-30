@@ -103,11 +103,12 @@ class ActionPreview(QWidget):
         self.editor.play_button.setText('暂停' if self.playing else '播放')
 
     def tick(self):
+        from diandian import action_duration
         now = time.monotonic()
         if self.playing:
             self.elapsed += min(now - self.last_tick, 0.1)
             action = self.editor.draft['actions'].get(self.editor.action_id, {})
-            duration = max(0.1, action.get('duration', 3))
+            duration = action_duration(action) if action.get('kind') == 'frames' else max(0.1, action.get('duration', 3))
             if self.elapsed > duration + 0.6:
                 self.elapsed = 0.0
             self.update()

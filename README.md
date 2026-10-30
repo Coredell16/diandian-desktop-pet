@@ -4,16 +4,18 @@ Cockatiel Diandian Desktop Pet
 
 Windows 玄凤鹦鹉桌面宠物项目，同时维护二维与 Unity 三维两条版本路线。
 
-- **v1.6 二维版**：Python 桌宠、帧动画、叫声、互动和可视化编辑器，新增个人照片生成整套外观。
+- **v1.6 二维版**：Python 桌宠、帧动画、叫声、互动和可视化编辑器，支持个人照片生成整套外观；本地 v1.6.2 支持全屏走动或固定位置，保留 v1.6.1 的动作平稳性改进。
 - **v2 三维版（制作中）**：Unity 工程，包含三维模型、骨骼、展翅和桌面窗口功能。**目前仅为初版，三维建模仍在制作中，模型细节和整体精细度尚待完善。**
 
-Windows 运行版：[下载 v1.6.0 分享包](https://github.com/Coredell16/diandian-desktop-pet/releases/tag/v1.6.0)。完整解压后运行“点点.exe”，无需安装 Python。
+Windows 运行版：[下载 v1.6.2 分享包](https://github.com/Coredell16/diandian-desktop-pet/releases/tag/v1.6.2)。完整解压后运行“点点.exe”，无需安装 Python。
+
+已有带更新功能的 v1 版本，可在“更新 v1… → 设置更新地址…”填写 [v1 更新清单](https://raw.githubusercontent.com/Coredell16/diandian-desktop-pet/main/updates/v1.json)，然后检查更新。新版已内置该地址；旧版填写一次后会保留。
 
 详细使用、构建与版本记录见 [项目说明.md](项目说明.md)。
 
 ## v1.6：用自己的照片生成玄凤桌宠
 
-1. 打开 v1.6.0 编辑器的“外观生成”，选择自己的玄凤照片。
+1. 打开 v1.6 编辑器的“外观生成”，选择自己的玄凤照片。
 2. 填写自己的图像服务 API Key。默认使用 OpenAI；也可填写兼容 Images Edit **JSON** 接口的 HTTPS 地址及模型名。
 3. 点击“生成整套动作”。共生成四组、32 个默认姿态；失败可继续未完成组，也可单独重生成一组。
 4. 逐组检查图片后点击“预览这套外观”，到“动作”页查看动画，最后“保存并应用”。可随时“恢复默认点点”后保存。

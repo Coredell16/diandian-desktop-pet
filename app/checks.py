@@ -6,6 +6,7 @@ import sys
 import tempfile
 import time
 from pathlib import Path
+from unittest.mock import patch
 
 from PyQt5.QtCore import QEvent, QPoint, QPointF, QRectF, QSettings, Qt
 from PyQt5.QtGui import QFontDatabase, QImage, QMouseEvent, QPainter
@@ -15,7 +16,8 @@ from PyQt5.QtWidgets import QApplication, QMenu
 
 
 def run(app):
-    from diandian import Diandian, VERSION, ROOT, action_pair, apply_motion, pose_sprite
+    from diandian import (Diandian, VERSION, ROOT, action_pair, apply_motion,
+                          pose_sprite, action_duration, action_stop, motion_strength)
     from content import asset_path, load_project, save_project, validate_project
 
     assert app.platformName() == 'offscreen', 'Set QT_QPA_PLATFORM=offscreen before QApplication.'
@@ -197,7 +199,7 @@ def run(app):
                                 bird.draw_preview(painter, bounds, bird.project, probe_id, elapsed,
                                                   bird.scaled, bird.flight_scaled)
                             else:
-                                apply_motion(painter, item['motion'], elapsed, size)
+                                apply_motion(painter, item['motion'], elapsed, size, action_duration(item))
                                 painter.drawPixmap(0, 0, sprite)
                             painter.end()
                             images.append(image)
@@ -210,6 +212,116 @@ def run(app):
                 bird.project = original_project
                 bird.mode = 'idle'
             checked.append('crest transitions use a single whole pose; preview draws once and matches runtime pixels without repeated-frame fading')
+
+            # Exercise actual input dispatch: pressing/repeating must preserve the
+            # current pose and clock until a different interaction is confirmed.
+            bird.muted, bird.sleeping, bird.hovered = True, False, False
+            bird.mode = 'idle'
+            bird.start_action('bite')
+            clock = bird.started
+            QTest.mousePress(bird, Qt.LeftButton, pos=QPoint(80, 120))
+            assert bird.mode == 'bite' and bird.started == clock
+            QTest.mouseRelease(bird, Qt.LeftButton, pos=QPoint(80, 120))
+            bird.cancel_click()
+            bird.play_action('bite')
+            assert bird.started == clock, 'Repeated interactions must not restart the animation.'
+            bird.play_action('pet')
+            assert bird.mode == 'pet' and bird.started >= clock
+            empty_preview = dict(baseline['actions']['walk'], frames=[])
+            assert action_duration(empty_preview) == empty_preview['duration'] + .28
+
+            for action in ('pet', 'walk', 'eat', 'curious', 'bite', 'rock'):
+                item = bird.project['actions'][action]
+                duration, stop = action_duration(item), action_stop(item)
+                assert item['duration'] <= stop <= item['duration'] + .300001
+                assert abs(duration - stop - .28) < 1e-8
+                assert motion_strength(0, duration) == motion_strength(duration, duration) == 0
+                strengths = [motion_strength(stop + .28 * i / 20, duration) for i in range(21)]
+                assert all(a >= b for a, b in zip(strengths, strengths[1:]))
+                assert action_pair(item, duration + .000001) == (0, 0, 0.0)
+                bird.mode = 'idle'
+                bird.start_action(action)
+                bird.started -= duration + .001
+                bird.until = time.monotonic() - .001
+                bird.tick()
+                bird.timer.stop()
+                assert bird.mode == 'idle'
+            if baseline['actions']['rock']['frames'] == [20]:
+                item = bird.project['actions']['rock']
+                assert all(action_pair(item, i / 30)[:2] == (20, 20)
+                           for i in range(int(action_stop(item) * 30)))
+            bird.mode, bird.hovered, bird.hover_angle = 'idle', True, 0.0
+            bird.last_tick = time.monotonic() - .05
+            bird.tick()
+            bird.timer.stop()
+            assert -2 < bird.hover_angle < 0 and bird.timer.interval() == 16
+            bird.hovered, bird.hover_angle = False, 0.0
+            checked.append('press/repeat preserves active action; bounded cycle completion, neutral final pose, eased motion/hover, and single-pose default rocker')
+
+            # Trigger the real menu entries, then advance the normal timer with
+            # a controlled clock to check movement and all pause conditions.
+            movement_menu = bird.menu()
+            position_menu = next(a.menu() for a in movement_menu.actions() if a.text() == '大小与位置')
+            movement_actions = {a.text(): a for a in position_menu.actions()
+                                if a.text() in ('全屏走动', '固定位置')}
+            assert len(movement_actions) == 2 and movement_actions['固定位置'].isChecked()
+            movement_actions['全屏走动'].trigger()
+            assert bird.movement_mode == 'roam' and movement_actions['全屏走动'].isChecked()
+            assert not movement_actions['固定位置'].isChecked()
+            assert bird.settings.value('movement_mode') == 'roam'
+            area = bird.screen_area()
+            center = QPoint(area.left() + (area.width()-bird.width())//2,
+                            area.top() + (area.height()-bird.height())//2)
+            bird.move(center)
+            bird.walk_remainder = bird.walk_remainder_y = 0.0
+            bird.walk_target = QPointF(center + QPoint(80, -60))
+            bird.mode, bird.sleeping, bird.hovered = 'walk', False, False
+            bird.next_action = bird.next_call = float('inf')
+
+            def movement_tick():
+                clock = time.monotonic()
+                bird.started, bird.until, bird.last_tick = clock-1, clock+30, clock-.1
+                with patch('diandian.time.monotonic', return_value=clock):
+                    bird.tick()
+                bird.timer.stop()
+
+            movement_tick()
+            assert bird.x() > center.x() and bird.y() < center.y() and bird.direction == 1
+            for flag, value in [('menu_open', True), ('drag_origin', QPoint(0, 0)),
+                                ('sleeping', True), ('editor', object())]:
+                before_position = bird.pos()
+                previous = getattr(bird, flag)
+                setattr(bird, flag, value)
+                movement_tick()
+                assert bird.pos() == before_position, 'Walking must pause for ' + flag
+                setattr(bird, flag, previous)
+            bird.walk_target = QPointF(area.left(), area.top())
+            bird.walk_on_screen(100000)
+            assert bird.pos() == area.topLeft() and area.contains(bird.geometry())
+            bird.walk_target = QPointF(area.right()-bird.width()+1, area.bottom()-bird.height()+1)
+            bird.walk_on_screen(100000)
+            assert area.contains(bird.geometry()) and bird.direction == 1
+            bird.walk_target = QPointF(area.right()+1000, area.bottom()+1000)
+            bird.walk_on_screen(100000)
+            assert area.contains(bird.geometry()), 'Stale targets must remain inside the current screen.'
+            movement_actions['固定位置'].trigger()
+            assert bird.movement_mode == 'fixed' and movement_actions['固定位置'].isChecked()
+            fixed_position = bird.pos()
+            movement_tick()
+            assert bird.mode == 'walk' and bird.pos() == fixed_position
+            bird.lively, bird.mode, bird.next_action = False, 'idle', 0
+            bird.tick()
+            bird.timer.stop()
+            assert bird.mode == 'idle'
+            bird.set_movement_mode('roam')
+            bird.mode, bird.next_action = 'idle', 0
+            bird.tick()
+            bird.timer.stop()
+            assert bird.project['actions'][bird.mode]['motion'] == 'walk'
+            bird.set_movement_mode('fixed')
+            bird.mode, bird.next_action = 'idle', float('inf')
+            movement_menu.deleteLater()
+            checked.append('exclusive fixed/roam menu; two-axis walking and screen bounds; drag/menu/sleep/editor pauses; fixed interactions and independent roaming')
 
             for direction in (-1, 1):
                 bird.mode = 'idle'
@@ -429,6 +541,7 @@ def run(app):
             bird.resize_pet(120)
             bird.set_volume(0.15)
             bird.muted, bird.auto_calls, bird.lively = True, True, False
+            bird.set_movement_mode('roam')
             bird.move(80, 70)
             expected_position = bird.pos()
             bird.save_settings()
@@ -437,13 +550,16 @@ def run(app):
             restored = make_bird(ini)
             assert restored.size_px == 120 and abs(restored.volume - 0.15) < 0.001
             assert restored.muted and restored.auto_calls and not restored.lively
+            assert restored.movement_mode == 'roam'
             assert restored.pos() == expected_position
             restored.hide()
             restored.settings.setValue('position', QPoint(-100000, 100000))
             restored.settings.setValue('size', 999)
+            restored.settings.setValue('movement_mode', 'invalid')
             restored.settings.sync()
             recovered = make_bird(ini)
             assert recovered.size_px == 150
+            assert recovered.movement_mode == 'fixed'
             assert QApplication.primaryScreen().availableGeometry().contains(recovered.geometry())
             assert Path(recovered.settings.fileName()).resolve().parent == scratch
             assert recovered.settings.status() == QSettings.NoError
